@@ -65,7 +65,7 @@ header p{margin:0;font-size:13px;opacity:.82}
     <div class="legend-row"><span class="dot" style="border:2px dashed #334155;background:transparent"></span> опция / резерв</div>
   </div>
 </div>
-<div class="bottom"><b>Базовый маршрут (тонкий пунктир):</b> Коломбо → Хиккадува / Унаватуна / Галле (пляж) → Синхараджа → Удавалаве / Яла → Элла → Хапутале → Нувара-Элия → Канди → Пиннавела (слоны) → Ратнапура → Полхена (океан). Обязательно в маршруте: слоны — Удавалаве, Пиннавела и центр реабилитации; обезьяны — Синхараджа и Элла.</div>
+<div class="bottom"><b>Базовый маршрут (тонкий пунктир):</b> Colombo → Hikkaduwa / Unawatuna / Galle (пляж) → Sinharaja → Udawalawe / Yala → Ella → Haputale → Nuwara Eliya → Kandy → Pinnawala (слоны) → Ratnapura → Polhena (океан). Обязательно в маршруте: слоны — Udawalawe, Pinnawala и Elephant Transit Home; обезьяны — Sinharaja и Ella.</div>
 </div>
 <div id="lightbox" onclick="if(event.target===this)lbClose()">
   <img id="lb-img" src="" alt="">
@@ -91,42 +91,6 @@ const points = [{"area": "Hikkaduwa", "name": "Hikkaduwa Coral Sanctuary", "why"
 {"area": "Gal Oya (резерв)", "name": "Gal Oya National Park", "why": "Резерв: необычное лодочное сафари, но географически слишком далеко для компактного кольцевого маршрута", "lat": 7.2069, "lng": 81.4739, "cats": ["Сафари"], "colors": ["#e53935"], "optional": true, "reserve": true},
 {"area": "Ella (резерв)", "name": "Nine Arch Bridge Viewpoint", "why": "Резерв: полезен как ракурс в одной прогулке, но не отдельная точка маршрута", "lat": 6.8731, "lng": 81.0568, "cats": ["9-арочный мост"], "colors": ["#f9a825"], "optional": true, "reserve": true}];
 const colors = {"Снорклинг": "#1e88e5", "Дайвинг": "#7e57c2", "Пляж": "#26a69a", "Культура": "#8e24aa", "Обезьяны": "#43a047", "Джунгли": "#2e7d32", "Слоны": "#fb8c00", "Сафари": "#e53935", "9-арочный мост": "#f9a825", "Купание у водопада": "#00acc1", "Чай": "#6d4c41", "Маршрут": "#334155"};
-
-const ruNames = {
-  "Hikkaduwa Coral Sanctuary": "Коралловый заповедник Хиккадувы",
-  "Jungle Beach": "Джангл-Бич, Унаватуна",
-  "Galle Fort": "Форт Галле",
-  "Sinharaja Rainforest": "Лесной заповедник Синхараджа",
-  "Udawalawe National Park": "Национальный парк Удавалаве",
-  "Yala National Park": "Национальный парк Яла",
-  "Pinnawala Elephant Orphanage": "Слоновий питомник Пиннавела",
-  "Elephant Transit Home": "Центр реабилитации слонов (Удавалаве)",
-  "Macaques of Ella": "Обезьяны Эллы",
-  "Nine Arch Bridge": "Девятиарочный мост",
-  "Upper Diyaluma Pools": "Верхние купели водопада Диялума",
-  "Lipton’s Seat / Dambatenne Tea Plantation": "Чайная плантация Дамбатенне и смотровая Липтон’с Сит",
-  "Polhena Beach": "Пляж Полхена",
-  "Unawatuna / Galle Diving": "Дайвинг в Унаватуне / Галле",
-  "Mirissa": "Мирисса",
-  "Udawattakale Forest Reserve": "Лесной заповедник Удаваттакеле",
-  "Bundala National Park": "Национальный парк Бундала",
-  "Polonnaruwa Ancient City": "Древний город Полоннарува",
-  "Pallewela / Alikoti Ella": "Водопады Паллевела / Аликоти Элла",
-  "Pulun Ella": "Водопад Пулун Элла",
-  "Mirissa Diving": "Дайвинг в Мириссе",
-  "Gal Oya National Park": "Национальный парк Гал-Оя",
-  "Nine Arch Bridge Viewpoint": "Смотровая Девятиарочного моста"
-};
-const ruAreas = {
-  "Hikkaduwa": "Хиккадува", "Unawatuna": "Унаватуна", "Galle": "Галле",
-  "Sinharaja": "Синхараджа", "Udawalawe": "Удавалаве", "Yala": "Яла",
-  "Ella": "Элла", "Haputale": "Хапутале", "Pinnawala": "Пиннавела",
-  "Kandy": "Канди", "Mirissa": "Мирисса", "Bundala": "Бундала",
-  "Polonnaruwa": "Полоннарува", "Nuwara Eliya": "Нувара-Элия",
-  "Unawatuna / Galle": "Унаватуна / Галле",
-  "Ella (резерв)": "Элла (резерв)", "Mirissa (резерв)": "Мирисса (резерв)",
-  "Gal Oya (резерв)": "Гал-Оя (резерв)", "Финал у океана": "Финал у океана"
-};
 
 const reviewsDb = {
   "Hikkaduwa Coral Sanctuary": [
@@ -223,19 +187,19 @@ const reviewsDb = {
   ]
 };
 const routeStops = [
-  ["Коломбо", 6.9271, 79.8612],
-  ["Хиккадува", 6.1397, 80.101],
-  ["Унаватуна / Галле", 6.017, 80.232],
-  ["Синхараджа", 6.404, 80.487],
-  ["Удавалаве", 6.476, 80.888],
-  ["Яла", 6.3728, 81.5185],
-  ["Элла", 6.8667, 81.0466],
-  ["Хапутале", 6.7702, 80.798],
-  ["Нувара-Элия", 6.9497, 80.759],
-  ["Канди", 7.2906, 80.6337],
-  ["Пиннавела", 7.3006, 80.3883],
-  ["Ратнапура", 6.6828, 80.3992],
-  ["Полхена", 5.9445, 80.5353]
+  ["Colombo", 6.9271, 79.8612],
+  ["Hikkaduwa", 6.1397, 80.101],
+  ["Unawatuna / Galle", 6.017, 80.232],
+  ["Sinharaja", 6.404, 80.487],
+  ["Udawalawe", 6.476, 80.888],
+  ["Yala", 6.3728, 81.5185],
+  ["Ella", 6.8667, 81.0466],
+  ["Haputale", 6.7702, 80.798],
+  ["Nuwara Eliya", 6.9497, 80.759],
+  ["Kandy", 7.2906, 80.6337],
+  ["Pinnawala", 7.3006, 80.3883],
+  ["Ratnapura", 6.6828, 80.3992],
+  ["Polhena", 5.9445, 80.5353]
 ];
 const map = L.map('map').setView([6.65,80.65], 8);
 
@@ -261,8 +225,8 @@ function iconHtml(item){
 function popupHtml(p){
   const gal = galleryHtml(p.name);
   return `${gal.length ? `<div style="position:relative">${gal}</div>` : ''}
-    <div class="popup-title">${ruNames[p.name] || p.name}</div>
-    <div class="popup-area">${ruAreas[p.area] || p.area}</div>
+    <div class="popup-title">${p.name}</div>
+    <div class="popup-area">${p.area}</div>
     <div>${p.cats.map(c=>`<span class="badge" style="background:${colors[c]}">${c}</span>`).join('')}</div>
     <div class="why">${p.why}</div>
     ${p.optional ? `<div style="margin-top:6px;font-size:11px;color:${p.reserve?'#b45309':'#6b7280'}">${p.reserve?'⌀ резерв':'◌ опция — если ляжет в маршрут'}</div>` : ''}

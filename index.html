@@ -32,6 +32,16 @@ header p{margin:0;font-size:13px;opacity:.82}
 .gal-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:24px;height:34px;border:none;border-radius:6px;background:rgba(17,24,39,.62);color:#fff;font-size:18px;cursor:pointer;line-height:1}
 .gal-prev{left:3px}.gal-next{right:3px}
 .gal-btn:hover{background:rgba(17,24,39,.85)}
+#lightbox{display:none;position:fixed;inset:0;z-index:5000;background:rgba(10,12,18,.93);align-items:center;justify-content:center}
+#lightbox.open{display:flex}
+#lb-img{max-width:92vw;max-height:86vh;object-fit:contain;border-radius:6px}
+.lb-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;color:#fff}
+#lb-count{font-size:14px;opacity:.85}
+.lb-x{border:none;background:rgba(255,255,255,.14);color:#fff;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer}
+.lb-x:hover{background:rgba(255,255,255,.3)}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);border:none;background:rgba(255,255,255,.14);color:#fff;width:46px;height:64px;border-radius:10px;font-size:28px;cursor:pointer}
+.lb-nav:hover{background:rgba(255,255,255,.3)}
+.lb-l{left:14px}.lb-r{right:14px}
 </style>
 </head>
 <body>
@@ -48,6 +58,12 @@ header p{margin:0;font-size:13px;opacity:.82}
   </div>
 </div>
 <div class="bottom"><b>Базовый маршрут (тонкий пунктир):</b> Colombo → Hikkaduwa / Unawatuna / Galle (пляж) → Sinharaja → Udawalawe / Yala → Ella → Haputale → Nuwara Eliya → Kandy → Ratnapura → Polhena (океан).</div>
+</div>
+<div id="lightbox" onclick="if(event.target===this)lbClose()">
+  <img id="lb-img" src="" alt="">
+  <div class="lb-top"><span id="lb-count"></span><button class="lb-x" onclick="lbClose()">✕</button></div>
+  <button class="lb-nav lb-l" onclick="lbMove(-1)">‹</button>
+  <button class="lb-nav lb-r" onclick="lbMove(1)">›</button>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -148,7 +164,7 @@ function galleryHtml(name){
   if(!imgs.length) return '';
   return `<div class="gal" data-gal="${name}">
     <button class="gal-btn gal-prev" onclick="galScroll(this,-1)">‹</button>
-    <div class="gal-track">${imgs.map(s=>`<img src="${s}" alt="" loading="lazy" onclick="location.href=this.src" onerror="this.remove()">`).join('')}</div>
+    <div class="gal-track">${imgs.map((s,i)=>`<img src="${s.thumb}" alt="" loading="lazy" onclick="lbOpen('${name.replace(/'/g,"\\'")}',${i})" onerror="this.remove()">`).join('')}</div>
     <button class="gal-btn gal-next" onclick="galScroll(this,1)">›</button>
   </div>`;
 }
@@ -157,17 +173,42 @@ function galScroll(btn,dir){
   track.scrollBy({left: dir*Math.max(track.clientWidth*0.8,200), behavior:'smooth'});
 }
 
+let lbList = [], lbIdx = 0;
+function lbOpen(name, idx){
+  lbList = galleries[name] || [];
+  if(!lbList.length) return;
+  lbShow(idx);
+  document.getElementById('lightbox').classList.add('open');
+}
+function lbShow(idx){
+  lbIdx = (idx + lbList.length) % lbList.length;
+  document.getElementById('lb-img').src = lbList[lbIdx].full;
+  document.getElementById('lb-count').textContent = (lbIdx+1) + ' / ' + lbList.length;
+}
+function lbMove(dir){ lbShow(lbIdx + dir); }
+function lbClose(){ document.getElementById('lightbox').classList.remove('open'); }
+document.addEventListener('keydown', e=>{
+  const lb = document.getElementById('lightbox');
+  if(!lb.classList.contains('open')) return;
+  if(e.key==='Escape') lbClose();
+  if(e.key==='ArrowLeft') lbMove(-1);
+  if(e.key==='ArrowRight') lbMove(1);
+});
+
 async function loadGallery(name){
   if(galleries[name]) return;
   galleries[name] = [];
   const term = searchTerms[name] || wiki[name] || name;
-  const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(term + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|mime&iiurlwidth=420`;
+  const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(term + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|mime&iiurlwidth=1600`;
   try{
     const r = await fetch(url); const d = await r.json();
     const files = Object.values(d.query?.pages||{})
       .filter(f=>f.imageinfo && /jpeg|png/.test(f.imageinfo[0].mime))
       .sort((a,b)=>a.index-b.index);
-    galleries[name] = files.slice(0,6).map(f=>f.imageinfo[0].thumburl);
+    galleries[name] = files.slice(0,6).map(f=>({
+      thumb: f.imageinfo[0].thumburl.replace('/1600px-', '/420px-'),
+      full: f.imageinfo[0].thumburl
+    }));
   }catch(e){}
   const m = layers[name];
   if(m && m.isPopupOpen()) m.setPopupContent(popupHtml(pointByName(name)));

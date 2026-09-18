@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Шри-Ланка — точки из моей таблицы</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+html,body,#app{height:100%;margin:0}
+body{font-family:Inter,Arial,sans-serif;background:#f8fafc}
+#app{display:flex;flex-direction:column}
+header{padding:14px 18px;background:#111827;color:#fff}
+header h1{margin:0 0 4px;font-size:20px}
+header p{margin:0;font-size:13px;opacity:.82}
+.toolbar{display:flex;flex-wrap:wrap;gap:7px;padding:9px 12px;background:#fff;border-bottom:1px solid #e5e7eb;z-index:1000}
+.chip{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:6px 10px;cursor:pointer;font-size:12px}
+.chip.active{color:#fff;border-color:transparent}
+#map{flex:1;min-height:500px}
+.legend{position:absolute;right:12px;top:12px;z-index:900;background:#fff;padding:9px 11px;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.22);font-size:12px;max-width:220px}
+.legend-row{display:flex;align-items:center;gap:7px;margin:4px 0}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex:0 0 11px}
+.bottom{padding:10px 14px;background:#fff;border-top:1px solid #e5e7eb;font-size:12px;color:#374151}
+.popup-title{font-weight:750;font-size:15px;margin-bottom:3px}
+.popup-area{color:#6b7280;font-size:11px;margin-bottom:7px}
+.badge{display:inline-block;color:#fff;border-radius:999px;padding:3px 7px;font-size:10px;margin:0 3px 5px 0}
+.why{font-size:13px;line-height:1.45}
+.train-label{font-weight:650}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>Шри-Ланка · только точки из твоей таблицы</h1>
+  <p>4–18 февраля 2027 · нажимай на метки · фильтруй активности цветными кнопками</p>
+</header>
+<div class="toolbar" id="filters"></div>
+<div id="map">
+  <div class="legend">
+    <div class="legend-row"><span class="dot" style="background:#334155"></span> основная точка маршрута</div>
+    <div class="legend-row"><span class="dot" style="border:2px dashed #334155;background:transparent"></span> опция / резерв</div>
+  </div>
+</div>
+<div class="bottom"><b>Маршрутная идея:</b> начать у океана → Hikkaduwa / Unawatuna → Sinharaja → Udawalawe / Yala → Ella + поезд + Diyaluma + чай → Polhena (океан).</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const points = [{"area": "Hikkaduwa", "name": "Hikkaduwa Coral Sanctuary", "why": "Лучший первый морской блок: снорклинг, черепахи, возможность дайвинга", "lat": 6.1397, "lng": 80.101, "cats": ["Снорклинг", "Дайвинг"], "colors": ["#1e88e5", "#7e57c2"]}, {"area": "Unawatuna", "name": "Jungle Beach", "why": "Спокойная бухта и пляжный день", "lat": 6.0144, "lng": 80.246, "cats": ["Пляж"], "colors": ["#26a69a"]}, {"area": "Galle", "name": "Galle Fort", "why": "Хорошая короткая культурная остановка между пляжами", "lat": 6.026, "lng": 80.217, "cats": ["Культура"], "colors": ["#8e24aa"]}, {"area": "Sinharaja", "name": "Sinharaja Rainforest", "why": "Настоящий влажный лес, птицы, приматы, тропы с гидом", "lat": 6.404, "lng": 80.487, "cats": ["Обезьяны", "Джунгли"], "colors": ["#43a047", "#2e7d32"]}, {"area": "Udawalawe", "name": "Udawalawe National Park", "why": "Лучший рациональный выбор под слонов", "lat": 6.476, "lng": 80.888, "cats": ["Слоны", "Сафари"], "colors": ["#fb8c00", "#e53935"]}, {"area": "Yala", "name": "Yala National Park", "why": "Второй сафари-день: шанс на леопарда и больше разнообразия", "lat": 6.3728, "lng": 81.5185, "cats": ["Сафари"], "colors": ["#e53935"]}, {"area": "Ella", "name": "Nine Arch Bridge", "why": "Главная фототочка региона", "lat": 6.875, "lng": 81.0597, "cats": ["9-арочный мост"], "colors": ["#f9a825"]}, {"area": "Ella", "name": "Upper Diyaluma Pools", "why": "Купание в природных ваннах над водопадом", "lat": 6.8194, "lng": 80.9788, "cats": ["Купание у водопада"], "colors": ["#00acc1"]}, {"area": "Ella", "name": "Uva Halpewatte Tea Factory", "why": "Самая удобная фабрика, не требует отдельного крюка", "lat": 6.8649, "lng": 81.0456, "cats": ["Чай"], "colors": ["#6d4c41"]}, {"area": "Haputale", "name": "Lipton’s Seat / Dambatenne", "why": "Чайные плантации и панорама, лучше на рассвете", "lat": 6.7702, "lng": 80.798, "cats": ["Чай"], "colors": ["#6d4c41"]}, {"area": "Поезд", "name": "Ella–Nanu Oya–Kandy", "why": "Главный живописный железнодорожный сегмент", "lat": null, "lng": null, "cats": ["Поезд"], "colors": ["#546e7a"]}, {"area": "Финал у океана", "name": "Polhena Beach", "why": "Спокойная вода и шанс на черепах; хороший финальный пляжный блок", "lat": 5.9445, "lng": 80.5353, "cats": ["Пляж", "Снорклинг"], "colors": ["#26a69a", "#1e88e5"]},
+{"area": "Unawatuna / Galle", "name": "Unawatuna / Galle Diving", "why": "Опция: один полноценный дайв-день, если хочется не просто снорклинг, а погружения", "lat": 6.0103, "lng": 80.2486, "cats": ["Дайвинг"], "colors": ["#7e57c2"], "optional": true},
+{"area": "Mirissa", "name": "Mirissa", "why": "Опция: хорошая вечерняя база с кафе, пляжем и атмосферой; можно вместо Polhena для финальных 2–3 ночей", "lat": 5.9483, "lng": 80.4716, "cats": ["Пляж"], "colors": ["#26a69a"], "optional": true},
+{"area": "Nuwara Eliya", "name": "Pedro Tea Estate", "why": "Опция: брать вместо Halpewatte, если в плане есть ночёвка в Nuwara Eliya", "lat": 6.9386, "lng": 80.7872, "cats": ["Чай"], "colors": ["#6d4c41"], "optional": true},
+{"area": "Kandy", "name": "Udawattakale Forest Reserve", "why": "Опция: лёгкая лесная прогулка рядом с городом; приятный бонус на день в Kandy", "lat": 7.2972, "lng": 80.6389, "cats": ["Джунгли"], "colors": ["#2e7d32"], "optional": true},
+{"area": "Bundala", "name": "Bundala National Park", "why": "Опция: вместо второго сафари в Yala, если интереснее птицы, лагуны и спокойнее формат", "lat": 6.1925, "lng": 81.1372, "cats": ["Сафари"], "colors": ["#e53935"], "optional": true},
+{"area": "Polonnaruwa", "name": "Polonnaruwa Ancient City", "why": "Опция: включать только при маршруте через Dambulla/Sigiriya; древний город + приматы", "lat": 7.5433, "lng": 81.0186, "cats": ["Культура"], "colors": ["#8e24aa"], "optional": true},
+{"area": "Ella (резерв)", "name": "Pallewela / Alikoti Ella", "why": "Резерв: на случай, если Diyaluma недоступна либо не хочется ехать далеко", "lat": 6.8622, "lng": 80.9517, "cats": ["Купание у водопада"], "colors": ["#00acc1"], "optional": true, "reserve": true},
+{"area": "Ella (резерв)", "name": "Pulun Ella", "why": "Резерв: запасной небольшой водопад, но заметно слабее Diyaluma", "lat": 6.7903, "lng": 81.0419, "cats": ["Купание у водопада"], "colors": ["#00acc1"], "optional": true, "reserve": true},
+{"area": "Mirissa (резерв)", "name": "Mirissa Diving", "why": "Резерв: запасной дайвинг; не нужен дополнительно к Hikkaduwa и Unawatuna", "lat": 5.9493, "lng": 80.4589, "cats": ["Дайвинг"], "colors": ["#7e57c2"], "optional": true, "reserve": true},
+{"area": "Gal Oya (резерв)", "name": "Gal Oya National Park", "why": "Резерв: необычное лодочное сафари, но географически слишком далеко для компактного кольцевого маршрута", "lat": 7.2069, "lng": 81.4739, "cats": ["Сафари"], "colors": ["#e53935"], "optional": true, "reserve": true},
+{"area": "Ella (резерв)", "name": "Nine Arch Bridge Viewpoint", "why": "Резерв: полезен как ракурс в одной прогулке, но не отдельная точка маршрута", "lat": 6.8731, "lng": 81.0568, "cats": ["9-арочный мост"], "colors": ["#f9a825"], "optional": true, "reserve": true},
+{"area": "Ella (резерв)", "name": "Tea Fields Viewpoint", "why": "Резерв: полезен как ракурс в одной прогулке, но не отдельная точка маршрута", "lat": 6.8719, "lng": 81.0724, "cats": ["Чай"], "colors": ["#6d4c41"], "optional": true, "reserve": true}];
+const colors = {"Снорклинг": "#1e88e5", "Дайвинг": "#7e57c2", "Пляж": "#26a69a", "Культура": "#8e24aa", "Обезьяны": "#43a047", "Джунгли": "#2e7d32", "Слоны": "#fb8c00", "Сафари": "#e53935", "9-арочный мост": "#f9a825", "Купание у водопада": "#00acc1", "Чай": "#6d4c41", "Поезд": "#546e7a"};
+const trainNodes = [["Kandy Railway Station", 7.2906, 80.6337], ["Nanu Oya Railway Station", 6.9497, 80.759], ["Ella Railway Station", 6.8667, 81.0466]];
+const map = L.map('map').setView([6.65,80.65], 8);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom:19,
+  subdomains:'abcd',
+  attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+}).addTo(map);
+
+const layers = {};
+let trainLine = null;
+
+function iconHtml(item){
+  const ring = item.optional
+    ? `background:transparent;border:3px dashed ${item.colors[0]};` + (item.colors.length>1 ? `outline:2px dashed ${item.colors[1]};outline-offset:-9px;` : '')
+    : (item.colors.length===1
+        ? `background:${item.colors[0]};border:3px solid white;`
+        : `background:conic-gradient(${(()=>{const n=item.colors.length,step=100/n;return item.colors.map((c,i)=>`${c} ${i*step}% ${(i+1)*step}%`).join(',')})()});border:3px solid white;`);
+  const size = item.optional ? 20 : (item.colors.length===1 ? 18 : 20);
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;${ring}box-shadow:0 1px 5px rgba(0,0,0,.45);${item.optional?'opacity:.85;':''}"></div>`;
+}
+
+function popupHtml(p){
+  return `<div class="popup-title">${p.name}</div>
+    <div class="popup-area">${p.area}</div>
+    <div>${p.cats.map(c=>`<span class="badge" style="background:${colors[c]}">${c}</span>`).join('')}</div>
+    <div class="why">${p.why}</div>
+    ${p.optional ? `<div style="margin-top:6px;font-size:11px;color:${p.reserve?'#b45309':'#6b7280'}">${p.reserve?'⌀ резерв':'◌ опция — если ляжет в маршрут'}</div>` : ''}`;
+}
+
+const wiki = {
+  "Hikkaduwa Coral Sanctuary": "Hikkaduwa",
+  "Jungle Beach": "Unawatuna",
+  "Galle Fort": "Galle Fort",
+  "Sinharaja Rainforest": "Sinharaja Forest Reserve",
+  "Udawalawe National Park": "Udawalawe National Park",
+  "Yala National Park": "Yala National Park",
+  "Nine Arch Bridge": "Nine Arch Bridge",
+  "Upper Diyaluma Pools": "Diyaluma Falls",
+  "Uva Halpewatte Tea Factory": "Haputale",
+  "Lipton’s Seat / Dambatenne": "Lipton's Seat",
+  "Polhena Beach": "Matara, Sri Lanka",
+  "Unawatuna / Galle Diving": "Unawatuna",
+  "Mirissa": "Mirissa",
+  "Mirissa Diving": "Mirissa",
+  "Pedro Tea Estate": "Pedro Tea Estate",
+  "Udawattakale Forest Reserve": "Udawattakele Forest Reserve",
+  "Bundala National Park": "Bundala National Park",
+  "Polonnaruwa Ancient City": "Polonnaruwa",
+  "Pallewela / Alikoti Ella": "Ella, Sri Lanka",
+  "Pulun Ella": "Ella, Sri Lanka",
+  "Gal Oya National Park": "Gal Oya National Park",
+  "Nine Arch Bridge Viewpoint": "Nine Arch Bridge",
+  "Tea Fields Viewpoint": "Tea production in Sri Lanka"
+};
+const searchTerms = {
+  "Uva Halpewatte Tea Factory": "tea factory Sri Lanka",
+  "Pallewela / Alikoti Ella": "waterfall Sri Lanka",
+  "Pulun Ella": "waterfall Sri Lanka"
+};
+const photos = {};
+
+async function loadPhotos(){
+  const titles = [...new Set(Object.values(wiki))].map(t=>encodeURIComponent(t));
+  for(let i=0;i<titles.length;i+=25){
+    const batch = titles.slice(i,i+25).join('|');
+    const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=420&titles=${batch}`;
+    try{
+      const r = await fetch(url); const d = await r.json();
+      Object.values(d.query.pages).forEach(pg=>{
+        if(pg.thumbnail) photos[pg.title] = pg.thumbnail.source;
+      });
+    }catch(e){}
+  }
+  for(const [name,term] of Object.entries(searchTerms)){
+    if(Object.entries(wiki).filter(([k,v])=>k===name).length && photos[wiki[name]]) continue;
+    try{
+      const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(term)}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=420`);
+      const d = await r.json();
+      const pg = Object.values(d.query?.pages||{})[0];
+      if(pg?.thumbnail && !photos[wiki[name]]) photos[wiki[name]] = pg.thumbnail.source;
+    }catch(e){}
+  }
+  points.forEach(p=>{
+    const src = photos[wiki[p.name]];
+    if(!src || !layers[p.name]) return;
+    const m = layers[p.name];
+    const html = popupHtml(p);
+    m.getPopup().setContent(html.replace('<div class="popup-title">',
+      `<img src="${src}" alt="" style="width:100%;max-width:260px;border-radius:8px;margin-bottom:7px;object-fit:cover" onerror="this.remove()"><div class="popup-title">`));
+  });
+}
+loadPhotos();
+
+points.forEach(p=>{
+  if(p.lat===null) return;
+  const icon=L.divIcon({className:'',html:iconHtml(p),iconSize:[26,26],iconAnchor:[13,13]});
+  layers[p.name]=L.marker([p.lat,p.lng],{icon}).bindPopup(popupHtml(p)).addTo(map);
+});
+
+const trainLatLngs=trainNodes.map(x=>[x[1],x[2]]);
+trainLine=L.polyline(trainLatLngs,{color:colors["Поезд"],weight:5,dashArray:'8 7',opacity:.9}).addTo(map);
+trainNodes.forEach((x,i)=>{
+  L.circleMarker([x[1],x[2]],{radius:5,color:colors["Поезд"],fillColor:'white',fillOpacity:1,weight:3})
+    .bindTooltip(`<span class="train-label">${i+1}. ${x[0]}</span>`).addTo(map);
+});
+
+const filters=document.getElementById('filters');
+Object.keys(colors).forEach(cat=>{
+  const b=document.createElement('button');
+  b.className='chip active';
+  b.textContent=cat;
+  b.style.background=colors[cat];
+  b.style.color='white';
+  b.onclick=()=>{
+    const active=b.classList.toggle('active');
+    b.style.background=active?colors[cat]:'#fff';
+    b.style.color=active?'#fff':'#111827';
+    apply();
+  };
+  filters.appendChild(b);
+});
+
+function apply(){
+  const active=[...document.querySelectorAll('.chip.active')].map(x=>x.textContent);
+  points.forEach(p=>{
+    if(!layers[p.name]) return;
+    const show=active.length===0 || p.cats.some(c=>active.includes(c));
+    if(show) layers[p.name].addTo(map); else map.removeLayer(layers[p.name]);
+  });
+  const trainVisible=active.length===0 || active.includes('Поезд');
+  if(trainVisible) trainLine.addTo(map); else map.removeLayer(trainLine);
+}
+</script>
+</body>
+</html>

@@ -148,7 +148,7 @@ function galleryHtml(name){
   if(!imgs.length) return '';
   return `<div class="gal" data-gal="${name}">
     <button class="gal-btn gal-prev" onclick="galScroll(this,-1)">‹</button>
-    <div class="gal-track">${imgs.map(s=>`<img src="${s}" alt="" loading="lazy" onclick="window.open(this.src,'_blank')" onerror="this.remove()">`).join('')}</div>
+    <div class="gal-track">${imgs.map(s=>`<img src="${s}" alt="" loading="lazy" onclick="location.href=this.src" onerror="this.remove()">`).join('')}</div>
     <button class="gal-btn gal-next" onclick="galScroll(this,1)">›</button>
   </div>`;
 }

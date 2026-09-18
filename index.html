@@ -25,6 +25,13 @@ header p{margin:0;font-size:13px;opacity:.82}
 .badge{display:inline-block;color:#fff;border-radius:999px;padding:3px 7px;font-size:10px;margin:0 3px 5px 0}
 .why{font-size:13px;line-height:1.45}
 .train-label{font-weight:650}
+.gal{position:relative;margin-bottom:8px}
+.gal-track{display:flex;gap:5px;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:8px;scrollbar-width:none}
+.gal-track::-webkit-scrollbar{display:none}
+.gal-track img{width:150px;height:105px;object-fit:cover;border-radius:6px;flex:0 0 auto;scroll-snap-align:start;cursor:zoom-in;background:#e5e7eb}
+.gal-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:24px;height:34px;border:none;border-radius:6px;background:rgba(17,24,39,.62);color:#fff;font-size:18px;cursor:pointer;line-height:1}
+.gal-prev{left:3px}.gal-next{right:3px}
+.gal-btn:hover{background:rgba(17,24,39,.85)}
 </style>
 </head>
 <body>
@@ -82,7 +89,9 @@ function iconHtml(item){
 }
 
 function popupHtml(p){
-  return `<div class="popup-title">${p.name}</div>
+  const gal = galleryHtml(p.name);
+  return `${gal.length ? `<div style="position:relative">${gal}</div>` : ''}
+    <div class="popup-title">${p.name}</div>
     <div class="popup-area">${p.area}</div>
     <div>${p.cats.map(c=>`<span class="badge" style="background:${colors[c]}">${c}</span>`).join('')}</div>
     <div class="why">${p.why}</div>
@@ -119,44 +128,49 @@ const searchTerms = {
   "Pallewela / Alikoti Ella": "waterfall Sri Lanka",
   "Pulun Ella": "waterfall Sri Lanka"
 };
-const photos = {};
+const galleries = {};
 
-async function loadPhotos(){
-  const titles = [...new Set(Object.values(wiki))].map(t=>encodeURIComponent(t));
-  for(let i=0;i<titles.length;i+=25){
-    const batch = titles.slice(i,i+25).join('|');
-    const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=420&titles=${batch}`;
-    try{
-      const r = await fetch(url); const d = await r.json();
-      Object.values(d.query.pages).forEach(pg=>{
-        if(pg.thumbnail) photos[pg.title] = pg.thumbnail.source;
-      });
-    }catch(e){}
-  }
-  for(const [name,term] of Object.entries(searchTerms)){
-    if(Object.entries(wiki).filter(([k,v])=>k===name).length && photos[wiki[name]]) continue;
-    try{
-      const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(term)}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=420`);
-      const d = await r.json();
-      const pg = Object.values(d.query?.pages||{})[0];
-      if(pg?.thumbnail && !photos[wiki[name]]) photos[wiki[name]] = pg.thumbnail.source;
-    }catch(e){}
-  }
-  points.forEach(p=>{
-    const src = photos[wiki[p.name]];
-    if(!src || !layers[p.name]) return;
-    const m = layers[p.name];
-    const html = popupHtml(p);
-    m.getPopup().setContent(html.replace('<div class="popup-title">',
-      `<img src="${src}" alt="" style="width:100%;max-width:260px;border-radius:8px;margin-bottom:7px;object-fit:cover" onerror="this.remove()"><div class="popup-title">`));
-  });
+function galleryHtml(name){
+  const imgs = galleries[name] || [];
+  if(!imgs.length) return '';
+  return `<div class="gal" data-gal="${name}">
+    <button class="gal-btn gal-prev" onclick="galScroll(this,-1)">‹</button>
+    <div class="gal-track">${imgs.map(s=>`<img src="${s}" alt="" loading="lazy" onclick="window.open(this.src,'_blank')" onerror="this.remove()">`).join('')}</div>
+    <button class="gal-btn gal-next" onclick="galScroll(this,1)">›</button>
+  </div>`;
 }
-loadPhotos();
+function galScroll(btn,dir){
+  const track = btn.parentElement.querySelector('.gal-track');
+  track.scrollBy({left: dir*Math.max(track.clientWidth*0.8,200), behavior:'smooth'});
+}
+
+async function loadGallery(name){
+  if(galleries[name]) return;
+  galleries[name] = [];
+  const term = searchTerms[name] || wiki[name] || name;
+  const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(term + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|mime&iiurlwidth=420`;
+  try{
+    const r = await fetch(url); const d = await r.json();
+    const files = Object.values(d.query?.pages||{})
+      .filter(f=>f.imageinfo && /jpeg|png/.test(f.imageinfo[0].mime))
+      .sort((a,b)=>a.index-b.index);
+    galleries[name] = files.slice(0,6).map(f=>f.imageinfo[0].thumburl);
+  }catch(e){}
+  const m = layers[name];
+  if(m && m.isPopupOpen()) m.setPopupContent(popupHtml(pointByName(name)));
+}
+function pointByName(name){ return points.find(p=>p.name===name); }
 
 points.forEach(p=>{
   if(p.lat===null) return;
   const icon=L.divIcon({className:'',html:iconHtml(p),iconSize:[26,26],iconAnchor:[13,13]});
-  layers[p.name]=L.marker([p.lat,p.lng],{icon}).bindPopup(popupHtml(p)).addTo(map);
+  layers[p.name]=L.marker([p.lat,p.lng],{icon}).bindPopup(popupHtml(p),{maxWidth:300,minWidth:260}).addTo(map);
+  layers[p.name].on('popupopen',()=>{
+    loadGallery(p.name).then(()=>{
+      const m = layers[p.name];
+      if(m.isPopupOpen()) m.setPopupContent(popupHtml(p));
+    });
+  });
 });
 
 const trainLatLngs=trainNodes.map(x=>[x[1],x[2]]);

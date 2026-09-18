@@ -255,12 +255,24 @@ const voyTitles = {
 
 async function loadReviews(name){
   const title = voyTitles[name] || wiki[name] || name;
+  let extract = '';
   try{
     const r = await fetch(`https://en.wikivoyage.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&redirects=1&titles=${encodeURIComponent(title)}`);
     const d = await r.json();
-    const pg = Object.values(d.query?.pages||{}).find(p=>p.extract && !p.missing);
-    if(!pg) return;
-    const sentences = pg.extract.replace(/\n+/g,' ').match(/[^.!?]+[.!?]+/g) || [];
+    const pg = Object.values(d.query?.pages||{}).find(p=>p.extract);
+    if(pg) extract = pg.extract;
+  }catch(e){}
+  if(!extract){
+    try{
+      const r = await fetch(`https://en.wikivoyage.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(title)}&gsrnamespace=0&gsrlimit=1&prop=extracts&explaintext=1`);
+      const d = await r.json();
+      const pg = Object.values(d.query?.pages||{})[0];
+      if(pg?.extract) extract = pg.extract;
+    }catch(e){}
+  }
+  if(!extract) return;
+  try{
+    const sentences = extract.replace(/\n+/g,' ').match(/[^.!?]+[.!?]+/g) || [];
     const chunks = [];
     let cur = '';
     for(const s of sentences){

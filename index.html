@@ -42,6 +42,11 @@ header p{margin:0;font-size:13px;opacity:.82}
 .lb-nav{position:absolute;top:50%;transform:translateY(-50%);border:none;background:rgba(255,255,255,.14);color:#fff;width:46px;height:64px;border-radius:10px;font-size:28px;cursor:pointer}
 .lb-nav:hover{background:rgba(255,255,255,.3)}
 .lb-l{left:14px}.lb-r{right:14px}
+.rev-block{margin-top:9px;border-top:1px solid #e5e7eb;padding-top:7px}
+.rev-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;margin-bottom:5px}
+.rev{background:#f3f4f6;border-radius:8px;padding:7px 9px;margin-bottom:5px}
+.rev-text{font-size:12px;line-height:1.45;color:#111827}
+.rev-src{font-size:10px;color:#9ca3af;margin-top:3px}
 </style>
 </head>
 <body>
@@ -126,7 +131,8 @@ function popupHtml(p){
     <div class="popup-area">${p.area}</div>
     <div>${p.cats.map(c=>`<span class="badge" style="background:${colors[c]}">${c}</span>`).join('')}</div>
     <div class="why">${p.why}</div>
-    ${p.optional ? `<div style="margin-top:6px;font-size:11px;color:${p.reserve?'#b45309':'#6b7280'}">${p.reserve?'⌀ резерв':'◌ опция — если ляжет в маршрут'}</div>` : ''}`;
+    ${p.optional ? `<div style="margin-top:6px;font-size:11px;color:${p.reserve?'#b45309':'#6b7280'}">${p.reserve?'⌀ резерв':'◌ опция — если ляжет в маршрут'}</div>` : ''}
+    ${reviewsHtml(p.name)}`;
 }
 
 const wiki = {
@@ -197,22 +203,83 @@ document.addEventListener('keydown', e=>{
 });
 
 async function loadGallery(name){
-  if(galleries[name]) return;
-  galleries[name] = [];
-  const term = searchTerms[name] || wiki[name] || name;
-  const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(term + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|mime&iiurlwidth=1600`;
-  try{
-    const r = await fetch(url); const d = await r.json();
-    const files = Object.values(d.query?.pages||{})
-      .filter(f=>f.imageinfo && /jpeg|png/.test(f.imageinfo[0].mime))
-      .sort((a,b)=>a.index-b.index);
-    galleries[name] = files.slice(0,6).map(f=>({
-      thumb: f.imageinfo[0].thumburl.replace('/1600px-', '/420px-'),
-      full: f.imageinfo[0].thumburl
-    }));
-  }catch(e){}
+  if(!galleries[name]){
+    galleries[name] = [];
+    const term = searchTerms[name] || wiki[name] || name;
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(term + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|mime&iiurlwidth=1600`;
+    try{
+      const r = await fetch(url); const d = await r.json();
+      const files = Object.values(d.query?.pages||{})
+        .filter(f=>f.imageinfo && /jpeg|png/.test(f.imageinfo[0].mime))
+        .sort((a,b)=>a.index-b.index);
+      galleries[name] = files.slice(0,6).map(f=>({
+        thumb: f.imageinfo[0].thumburl.replace('/1600px-', '/420px-'),
+        full: f.imageinfo[0].thumburl
+      }));
+    }catch(e){}
+  }
+  if(!reviews[name]){
+    reviews[name] = [];
+    loadReviews(name);
+  }
   const m = layers[name];
   if(m && m.isPopupOpen()) m.setPopupContent(popupHtml(pointByName(name)));
+}
+
+const reviews = {};
+const voyTitles = {
+  "Hikkaduwa Coral Sanctuary": "Hikkaduwa",
+  "Jungle Beach": "Unawatuna",
+  "Galle Fort": "Galle",
+  "Sinharaja Rainforest": "Sinharaja Forest Reserve",
+  "Udawalawe National Park": "Uda Walawe National Park",
+  "Yala National Park": "Yala National Park",
+  "Nine Arch Bridge": "Ella",
+  "Upper Diyaluma Pools": "Ella",
+  "Lipton’s Seat / Dambatenne Tea Plantation": "Haputale",
+  "Polhena Beach": "Matara",
+  "Unawatuna / Galle Diving": "Unawatuna",
+  "Mirissa": "Mirissa",
+  "Mirissa Diving": "Mirissa",
+  "Udawattakale Forest Reserve": "Kandy",
+  "Bundala National Park": "Bundala National Park",
+  "Polonnaruwa Ancient City": "Polonnaruwa",
+  "Pallewela / Alikoti Ella": "Ella",
+  "Pulun Ella": "Ella",
+  "Gal Oya National Park": "Gal Oya National Park",
+  "Nine Arch Bridge Viewpoint": "Ella",
+  "Pinnawala Elephant Orphanage": "Pinnawala",
+  "Elephant Transit Home": "Uda Walawe National Park",
+  "Macaques of Ella": "Ella"
+};
+
+async function loadReviews(name){
+  const title = voyTitles[name] || wiki[name] || name;
+  try{
+    const r = await fetch(`https://en.wikivoyage.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&redirects=1&titles=${encodeURIComponent(title)}`);
+    const d = await r.json();
+    const pg = Object.values(d.query?.pages||{}).find(p=>p.extract && !p.missing);
+    if(!pg) return;
+    const sentences = pg.extract.replace(/\n+/g,' ').match(/[^.!?]+[.!?]+/g) || [];
+    const chunks = [];
+    let cur = '';
+    for(const s of sentences){
+      if(s.trim().length < 25) continue;
+      cur += ' ' + s.trim();
+      if(cur.length > 130){ chunks.push(cur.trim()); cur = ''; }
+      if(chunks.length === 3) break;
+    }
+    reviews[name] = chunks.map(t=>({text:t, src:'Wikivoyage — путеводитель путешественников'}));
+    const m = layers[name];
+    if(m && m.isPopupOpen()) m.setPopupContent(popupHtml(pointByName(name)));
+  }catch(e){}
+}
+
+function reviewsHtml(name){
+  const list = reviews[name] || [];
+  if(!list.length) return '';
+  return `<div class="rev-block"><div class="rev-title">Отзывы путешественников</div>
+    ${list.map(r=>`<div class="rev"><div class="rev-text">«${r.text}»</div><div class="rev-src">${r.src}</div></div>`).join('')}</div>`;
 }
 function pointByName(name){ return points.find(p=>p.name===name); }
 
